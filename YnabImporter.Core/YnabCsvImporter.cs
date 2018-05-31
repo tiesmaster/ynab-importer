@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
@@ -10,54 +9,55 @@ namespace YnabImporter.Core
 {
     public static class YnabCsvImporter
     {
-        public static string FromRabobank(string csvText)
+        private static readonly Configuration _csvWriterConfiguration = new Configuration
+        {
+            QuoteAllFields = true
+        };
+
+        public static string FromRabobank(string rabobankCsvText)
+        {
+            var inputRecords = ReadRecords(rabobankCsvText);
+            var convertedRecords = inputRecords.Select(ConvertToYnabRecord);
+            var ynabCsvText = WriteRecords(convertedRecords);
+
+            return ynabCsvText;
+        }
+
+        private static IEnumerable<dynamic> ReadRecords(string csvText)
         {
             var csvReader = new CsvReader(new StringReader(csvText));
-            var inputRecords = csvReader.GetRecords<dynamic>();
-            var convertedRecords = inputRecords.Select(ConvertToYnabRecord);
+            return csvReader.GetRecords<dynamic>();
+        }
 
-            var csvWriterConfiguration = new Configuration
+        private static YnabRecord ConvertToYnabRecord(dynamic rawRecord)
+        {
+            string inAndOutFlowAmount = rawRecord.Bedrag;
+            var isOutflow = inAndOutFlowAmount[0] == '-';
+            var positiveAmount = inAndOutFlowAmount.Substring(1);
+
+            return new YnabRecord
             {
-                QuoteAllFields = true
+                Date = rawRecord.Datum,
+                Payee = GetPropertyByName(rawRecord, "Naam tegenpartij"),
+                Memo = GetPropertyByName(rawRecord, "Omschrijving-1"),
+                Outflow = isOutflow ? positiveAmount : null,
+                Inflow = isOutflow ? null : positiveAmount
             };
+        }
 
+        private static string GetPropertyByName(dynamic firstRecord, string propertyName)
+        {
+            return (string)((IDictionary<string, object>)firstRecord)[propertyName];
+        }
+
+        private static string WriteRecords(IEnumerable<YnabRecord> convertedRecords)
+        {
             var innerWriter = new StringWriter();
 
-            var csvWriter = new CsvWriter(innerWriter, csvWriterConfiguration);
+            var csvWriter = new CsvWriter(innerWriter, _csvWriterConfiguration);
             csvWriter.WriteRecords(convertedRecords);
 
             return innerWriter.ToString();
         }
-
-        private static YnabRecord ConvertToYnabRecord(dynamic firstRecord)
-        {
-            string amount = firstRecord.Bedrag;
-            var isOutflow = amount[0] == '-';
-
-            var result = new YnabRecord
-            {
-                Date = firstRecord.Datum,
-                Payee = GetPropertyWithSpaces(firstRecord, "Naam tegenpartij"),
-                Memo = GetPropertyWithSpaces(firstRecord, "Omschrijving-1"),
-                Outflow = isOutflow ? amount.Substring(1) : string.Empty,
-                Inflow = isOutflow ? string.Empty : amount.Substring(1)
-            };
-
-            return result;
-        }
-
-        private static string GetPropertyWithSpaces(dynamic firstRecord, string propertyName)
-        {
-            return (string)((IDictionary<string, object>)firstRecord)[propertyName];
-        }
-    }
-
-    public class YnabRecord
-    {
-        public string Date { get; set; }
-        public string Payee { get; set; }
-        public string Memo { get; set; }
-        public string Outflow { get; set; }
-        public string Inflow { get; set; }
     }
 }
