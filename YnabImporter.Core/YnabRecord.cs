@@ -1,14 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-
-using CsvHelper;
-using CsvHelper.Configuration;
-
-namespace YnabImporter.Core
+﻿namespace YnabImporter.Core
 {
-
     public class YnabRecord
     {
         public string Date { get; set; }
