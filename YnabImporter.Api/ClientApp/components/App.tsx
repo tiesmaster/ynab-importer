@@ -29,7 +29,10 @@ export class App extends React.Component<RouteComponentProps<{}>, {}> {
                     },
                     method: "POST"
                 }).then(response => {
-                    response.text().then(csv => console.log(csv));
+                    response.text().then(csv => {
+                        console.log(csv);
+                        FileDownload(csv, "ynab.csv", "text/csv");
+                    });
                 });
             };
             reader.readAsText(f);
