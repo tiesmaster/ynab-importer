@@ -2,8 +2,6 @@
 import { RouteComponentProps } from "react-router";
 import * as FileDownload from "js-file-download";
 
-//import "./App.css";
-
 import { ChangeEvent, MouseEvent } from "react";
 
 export class App extends React.Component<RouteComponentProps<{}>, {}> {
