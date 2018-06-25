@@ -10,33 +10,41 @@ export class App extends React.Component<RouteComponentProps<{}>, {}> {
     this.handleFileSelected = this.handleFileSelected.bind(this);
   }
   public handleFileSelected(e: ChangeEvent<HTMLInputElement>) {
-    if (e.currentTarget.files != null) {
-      const f = e.currentTarget.files[0];
-      const reader = new FileReader();
-      const name = f.name;
+    e.preventDefault();
 
-      reader.onload = (fr: ProgressEvent) => {
-        const target: any = fr.target;
-        const data = target.result;
-
-        fetch("/api/YnabImporter", {
-          body: JSON.stringify(data),
-          headers: {
-            "Content-Type": "application/json-patch+json"
-          },
-          method: "POST"
-        }).then(response => {
-          response.text().then(csv => {
-            console.log(csv);
-            FileDownload(csv, "ynab.csv", "text/csv");
-          });
-        });
-      };
-      reader.readAsText(f);
+    if (e.currentTarget.files == null) {
+      return;
     }
 
-    e.preventDefault();
+    this.processFile(e.currentTarget.files[0]);
   }
+  private async processFile(inputCsvFile: File) {
+    const inputCsvText = await this.readFile(inputCsvFile);
+    const ynabCsvText = await this.convertToYnab(inputCsvText);
+    FileDownload(ynabCsvText, "ynab.csv", "text/csv");
+  }
+  private readFile(fileHandle: File) {
+    return new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = async (e: ProgressEvent) => {
+        const target: any = e.target;
+        const fileContent: string = target.result;
+        resolve(fileContent);
+      };
+      reader.readAsText(fileHandle);
+    });
+  }
+  private async convertToYnab(raboCsvText: string) {
+    const response = await fetch("/api/YnabImporter", {
+      body: JSON.stringify(raboCsvText),
+      headers: {
+        "Content-Type": "application/json-patch+json"
+      },
+      method: "POST"
+    });
+    return await response.text();
+  }
+
   public render() {
     return (
       <div className="App">
